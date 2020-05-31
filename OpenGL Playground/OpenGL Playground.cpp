@@ -7,7 +7,8 @@
 
 const GLint WIDTH = 800, HEIGHT = 600;
 
-GLuint VAO, VBO, shader;
+GLuint VAO, VBO, EBO, shader;
+
 
 // Vertex Shader
 static const char* vShader = "										\n\
@@ -15,7 +16,7 @@ static const char* vShader = "										\n\
 layout (location = 0) in vec3 pos;									\n\
 void main()															\n\
 {																	\n\
-	gl_Position = vec4(0.5 * pos.x, 0.5 * pos.y, 0.5 * pos.z, 1.0);}\n\
+	gl_Position = vec4(pos.x, pos.y, pos.z, 1.0);}\n\
 ";
 
 // Fragment Shader
@@ -24,87 +25,110 @@ static const char* fShader = "										\n\
 out vec4 colour;													\n\
 void main()															\n\
 {																	\n\
-	colour = vec4(0.5, 0.2, 1.0, 1.0);}								\n\
+	colour = vec4(1.0, 0.5, 0.0, 1.0);}								\n\
 ";
 
 
 void AddShader(GLuint theProgram, const char* shaderCode, GLenum shaderType) {
+	// Create the shader
 	GLuint theShader = glCreateShader(shaderType);
 
+	// Add the code to an array
 	const GLchar* theCode[1];
-
 	theCode[0] = shaderCode;
 
+	// Store the length of the code in an array 
 	GLint codeLength[1];
 	codeLength[0] = strlen(shaderCode);
 
+	// Set Source & Compile
 	glShaderSource(theShader, 1, theCode, codeLength);
 	glCompileShader(theShader);
 
-	GLint result = 0;
-	GLchar eLog[1024] = { 0 };
-
-	glGetShaderiv(theShader, GL_COMPILE_STATUS, &result);
-	if (!result) {
-		glGetShaderInfoLog(theShader, sizeof(eLog), NULL, eLog);
-		std::cout << "Error Compiling " << shaderType << " Shader : " << eLog << std::endl;
+	// Check & Log for errors
+	GLint success = 0;
+	GLchar errorLog[1024] = { 0 };
+	glGetShaderiv(theShader, GL_COMPILE_STATUS, &success);
+	if (!success) {
+		glGetShaderInfoLog(theShader, sizeof(errorLog), NULL, errorLog);
+		std::cout << "Error Compiling " << shaderType << " Shader : " << errorLog << std::endl;
 		return;
 	}
 
+	// Attach the compiled shader to the existing program
 	glAttachShader(theProgram, theShader);
 }
 
 void CompileShaders() {
+	// Create a program for storing all the shaders
 	shader = glCreateProgram();
 
+	// Check successful creation
 	if (!shader) {
 		std::cout << "Error creating shader" << std::endl;
 		return;
 	}
 
+	// Add Vertex & Fragment Shaders
 	AddShader(shader, vShader, GL_VERTEX_SHADER);
 	AddShader(shader, fShader, GL_FRAGMENT_SHADER);
 
-	GLint result = 0;
-	GLchar eLog[1024] = { 0 };
+	// Check & Log for errors
+	GLint success = 0;
+	GLchar errorLog[1024] = { 0 };
 
+	// Linking
 	glLinkProgram(shader);
-	glGetProgramiv(shader, GL_LINK_STATUS, &result);
-	if (!result) {
-		glGetProgramInfoLog(shader, sizeof(eLog), NULL, eLog);
-		std::cout << "Error Linking Program : " << eLog << std::endl;
+	glGetProgramiv(shader, GL_LINK_STATUS, &success);
+	if (!success) {
+		glGetProgramInfoLog(shader, sizeof(errorLog), NULL, errorLog);
+		std::cout << "Error Linking Program : " << errorLog << std::endl;
 		return;
 	}
 
+	// Validating
 	glValidateProgram(shader);
-	glGetProgramiv(shader, GL_VALIDATE_STATUS, &result);
-	if (!result) {
-		glGetProgramInfoLog(shader, sizeof(eLog), NULL, eLog);
-		std::cout << "Error Linking Program : " << eLog << std::endl;
+	glGetProgramiv(shader, GL_VALIDATE_STATUS, &success);
+	if (!success) {
+		glGetProgramInfoLog(shader, sizeof(errorLog), NULL, errorLog);
+		std::cout << "Error Validating Program : " << errorLog << std::endl;
 		return;
 	}
 }
 
-void CreateTriangle() {
+void CreateTriangles() {
 	// Vertices of the triangle
 	GLfloat vertices[] = {
-		-1.0f, -1.0f, 0.0f,
-		1.0f, -1.0f, 0.0f,
-		0.0f, 1.0f, 0.0f
+		 0.5f,  0.5f, 0.0f,  // top right
+		 0.5f, -0.5f, 0.0f,  // bottom right
+		-0.5f, -0.5f, 0.0f,  // bottom left
+		-0.5f,  0.5f, 0.0f,  // top left
+		 0.0f,  0.5f, 0.0f   // top middle
+	};
+
+	GLuint indices[] = {
+		4, 1, 2
 	};
 
 	// Generate & Bind VAO
 	glGenVertexArrays(1, &VAO);
+
+	// Generate VBO, EBO 
+	glGenBuffers(1, &VBO);
+	glGenBuffers(1, &EBO);
+
+	// Bind VAO
 	glBindVertexArray(VAO);
 
-	// Generate & Bind VBO for the above VAO
-	glGenBuffers(1, &VBO);
+	// Bind VBO
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-
-	// Connect buffer to actual data
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	// Bind EBO
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), 0);
 	glEnableVertexAttribArray(0);
 
 	// Unbind VBO
@@ -113,6 +137,7 @@ void CreateTriangle() {
 	glBindVertexArray(0);
 
 }
+
 
 int main()
 {
@@ -156,15 +181,17 @@ int main()
 		std::cout << "GLEW Init failed" << std::endl;
 		glfwDestroyWindow(mainWindow);
 		glfwTerminate();
-		return 1;
+		return 1; 
 	}
-
 	// Setup Viewport Size
 	glViewport(0, 0, bufferWidth, bufferHeight);
 
 	//Load & Compile Shaders & triangle
-	CreateTriangle();
+	CreateTriangles();
 	CompileShaders();
+
+	// Uncomment below line to View Wireframe
+	// glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 	// Loop till the window is closed
 	while (!glfwWindowShouldClose(mainWindow)) {
@@ -183,8 +210,9 @@ int main()
 		glBindVertexArray(VAO);
 
 		// Draw 
-		glDrawArrays(GL_TRIANGLES, 0, 3);
-
+		// glDrawArrays(GL_TRIANGLES, 0, 6);
+		glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
+	
 		// Unbind VAO
 		glBindVertexArray(0);
 
