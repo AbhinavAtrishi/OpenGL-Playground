@@ -5,27 +5,36 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/string_cast.hpp>
+
 const GLint WIDTH = 800, HEIGHT = 600;
 
 GLuint VAO, VBO, EBO, shader;
 
+// Uniform Variables
+GLuint modelLocation, colourLocation;
 
 // Vertex Shader
 static const char* vShader = "										\n\
 #version 330														\n\
 layout (location = 0) in vec3 pos;									\n\
+uniform mat4 modelMatrix;											\n\
 void main()															\n\
 {																	\n\
-	gl_Position = vec4(pos.x, pos.y, pos.z, 1.0);}\n\
+	gl_Position = modelMatrix * vec4(pos.x, pos.y, pos.z, 1.0);}	\n\
 ";
 
 // Fragment Shader
 static const char* fShader = "										\n\
 #version 330														\n\
 out vec4 colour;													\n\
+uniform vec4 inputColour;											\n\
 void main()															\n\
 {																	\n\
-	colour = vec4(1.0, 0.5, 0.0, 1.0);}								\n\
+	colour = inputColour;}											\n\
 ";
 
 
@@ -94,6 +103,10 @@ void CompileShaders() {
 		std::cout << "Error Validating Program : " << errorLog << std::endl;
 		return;
 	}
+
+	// Get colour location
+	colourLocation = glGetUniformLocation(shader, "inputColour");
+	modelLocation = glGetUniformLocation(shader, "modelMatrix");
 }
 
 void CreateTriangles() {
@@ -103,11 +116,12 @@ void CreateTriangles() {
 		 0.5f, -0.5f, 0.0f,  // bottom right
 		-0.5f, -0.5f, 0.0f,  // bottom left
 		-0.5f,  0.5f, 0.0f,  // top left
-		 0.0f,  0.5f, 0.0f   // top middle
+		 0.0f,  0.5f, 0.0f,  // top middle
+		 0.0f, -0.5f, 0.0f   // bottom middle
 	};
 
 	GLuint indices[] = {
-		4, 1, 2
+		4, 1, 2,
 	};
 
 	// Generate & Bind VAO
@@ -206,12 +220,27 @@ int main()
 		// Assign shader
 		glUseProgram(shader);
 
+		// Get time
+		float timeSeconds = glfwGetTime();
+		float sineWave = sin(timeSeconds) / 4.0f;
+		float cosWave = cos(timeSeconds) / 4.0f;
+
+		glm::mat4 model = glm::mat4(1.0);
+
+		// std::cout << glm::to_string(model) << std::endl;
+		model = glm::translate(model, glm::vec3(sineWave, cosWave, 0.0f));
+
+
+		// Set the colour
+		glUniform4f(colourLocation, 0.75f, 0.25, 0.0f, 1.0f);
+		glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(model));
+
 		// Bind VAO
 		glBindVertexArray(VAO);
 
 		// Draw 
-		// glDrawArrays(GL_TRIANGLES, 0, 6);
-		glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
+		// glDrawArrays(GL_TRIANGLES, 0, 3);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 	
 		// Unbind VAO
 		glBindVertexArray(0);
