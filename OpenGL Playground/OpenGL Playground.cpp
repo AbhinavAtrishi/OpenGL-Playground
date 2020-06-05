@@ -10,31 +10,35 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/string_cast.hpp>
 
+
+const GLfloat PI = 3.1415926535f;
 const GLint WIDTH = 800, HEIGHT = 600;
 
 GLuint VAO, VBO, EBO, shader;
 
 // Uniform Variables
-GLuint modelLocation, colourLocation;
+GLuint modelLocation;
 
 // Vertex Shader
 static const char* vShader = "										\n\
 #version 330														\n\
 layout (location = 0) in vec3 pos;									\n\
+out vec4 vertexColour;												\n\
 uniform mat4 modelMatrix;											\n\
 void main()															\n\
 {																	\n\
-	gl_Position = modelMatrix * vec4(pos.x, pos.y, pos.z, 1.0);}	\n\
+	gl_Position = modelMatrix * vec4(pos, 1.0);						\n\
+	vertexColour = vec4(clamp(pos, 0.0f, 1.0f), 1.0f);}				\n\
 ";
 
 // Fragment Shader
 static const char* fShader = "										\n\
 #version 330														\n\
+in vec4 vertexColour;												\n\
 out vec4 colour;													\n\
-uniform vec4 inputColour;											\n\
 void main()															\n\
 {																	\n\
-	colour = inputColour;}											\n\
+	colour = vertexColour;}											\n\
 ";
 
 
@@ -104,24 +108,24 @@ void CompileShaders() {
 		return;
 	}
 
-	// Get colour location
-	colourLocation = glGetUniformLocation(shader, "inputColour");
+	// Get model location
 	modelLocation = glGetUniformLocation(shader, "modelMatrix");
 }
 
 void CreateTriangles() {
 	// Vertices of the triangle
 	GLfloat vertices[] = {
-		 0.5f,  0.5f, 0.0f,  // top right
-		 0.5f, -0.5f, 0.0f,  // bottom right
-		-0.5f, -0.5f, 0.0f,  // bottom left
-		-0.5f,  0.5f, 0.0f,  // top left
-		 0.0f,  0.5f, 0.0f,  // top middle
-		 0.0f, -0.5f, 0.0f   // bottom middle
+		-1.0f, -1.0f, 0.0f,
+		 0.0f, -1.0f, 1.0f,
+		 1.0f, -1.0f, 0.0f,
+		 0.0f,  1.0f, 0.0f
 	};
 
 	GLuint indices[] = {
-		4, 1, 2,
+		0, 3, 1,
+		1, 3, 2,
+		0, 3, 2,
+		1, 0, 2
 	};
 
 	// Generate & Bind VAO
@@ -172,7 +176,7 @@ int main()
 	// Allow forward compatibility
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 
-	GLFWwindow* mainWindow = glfwCreateWindow(WIDTH, HEIGHT, "First Window", NULL, NULL);
+	GLFWwindow* mainWindow = glfwCreateWindow(WIDTH, HEIGHT, "Rendered Output", NULL, NULL);
 
 	if (!mainWindow) {
 		std::cout << "GLFW Window Creation Failed" << std::endl;
@@ -197,6 +201,10 @@ int main()
 		glfwTerminate();
 		return 1; 
 	}
+
+	// Enable Depth testing
+	glEnable(GL_DEPTH_TEST);
+
 	// Setup Viewport Size
 	glViewport(0, 0, bufferWidth, bufferHeight);
 
@@ -215,7 +223,7 @@ int main()
 
 		// Clear the window
 		glClearColor(0.0f, 0.4f, 0.6f, 0.5f);
-		glClear(GL_COLOR_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// Assign shader
 		glUseProgram(shader);
@@ -228,11 +236,12 @@ int main()
 		glm::mat4 model = glm::mat4(1.0);
 
 		// std::cout << glm::to_string(model) << std::endl;
-		model = glm::translate(model, glm::vec3(sineWave, cosWave, 0.0f));
+		// model = glm::translate(model, glm::vec3(sineWave, 0.0f, 0.0f));
+		model = glm::rotate(model, 2.0f * PI * sineWave, glm::vec3(0.0f, 1.0f, 0.0f));
+		model = glm::scale(model, glm::vec3(0.5f , 0.5f, 0.5f));
 
 
-		// Set the colour
-		glUniform4f(colourLocation, 0.75f, 0.25, 0.0f, 1.0f);
+		// Set model matrix
 		glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(model));
 
 		// Bind VAO
@@ -240,7 +249,7 @@ int main()
 
 		// Draw 
 		// glDrawArrays(GL_TRIANGLES, 0, 3);
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, 0);
 	
 		// Unbind VAO
 		glBindVertexArray(0);
