@@ -1,5 +1,39 @@
 #include "Window.h"
 
+// Static Function
+void Window::HandleKeys(GLFWwindow* window, GLint key, GLint code, GLint action, GLint mode) {
+	Window* curWindow = static_cast<Window*>(glfwGetWindowUserPointer(window));
+
+	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
+		glfwSetWindowShouldClose(window, GL_TRUE);
+	}
+
+	if (key >= 0 && key < 1024) {
+		if (action == GLFW_PRESS) {
+			curWindow->keys[key] = true;
+		}
+		else if (action == GLFW_RELEASE) {
+			curWindow->keys[key] = false;
+		}
+	}
+}
+
+void Window::HandleMouse(GLFWwindow* window, GLdouble curX, GLdouble curY) {
+	Window* curWindow = static_cast<Window*>(glfwGetWindowUserPointer(window));
+
+	if (curWindow->initialMovement) {
+		curWindow->lastX = curX;
+		curWindow->lastY = curY;
+		curWindow->initialMovement = false;
+	}
+
+	curWindow->xChange = curX - curWindow->lastX;
+	curWindow->yChange = curWindow->lastY - curY;
+
+	curWindow->lastX = curX;
+	curWindow->lastY = curY;
+}
+
 Window::Window() {
 	// Initialize with default values
 	width = 800;
@@ -67,11 +101,30 @@ int Window::Initialize() {
 	// Setup Viewport Size
 	glViewport(0, 0, bufferWidth, bufferHeight);
 
-	std::cout << "Successfull in creating window" << std::endl;
+	glfwSetWindowUserPointer(mainWindow, this);
+
+	// Set Callbacks
+	glfwSetKeyCallback(mainWindow, HandleKeys);
+	glfwSetCursorPosCallback(mainWindow, HandleMouse);
+
+	//Disable cursor
+	glfwSetInputMode(mainWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 }
 
 bool Window::getShouldClose() {
 	return glfwWindowShouldClose(mainWindow);
+}
+
+GLfloat Window::getXChange() {
+	GLfloat theChange = xChange;
+	xChange = 0.0f;
+	return theChange;
+}
+
+GLfloat Window::getYChange() {
+	GLfloat theChange = yChange;
+	yChange = 0.0f;
+	return theChange;
 }
 
 Window::~Window() {

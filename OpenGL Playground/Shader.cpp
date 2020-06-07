@@ -75,6 +75,7 @@ void Shader::CompileShader(const char* vCode, const char* fCode) {
 	// Get model location
 	modelMatrixLoc = glGetUniformLocation(shaderID, "modelMatrix");
 	projectionMatrixLoc = glGetUniformLocation(shaderID, "projectionMatrix");
+	viewMatrixLoc = glGetUniformLocation(shaderID, "viewMatrix");
 }
 
 void Shader::AddShader(GLuint theProgram, const char* shaderCode, GLenum shaderType) {

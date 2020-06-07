@@ -19,13 +19,14 @@ public:
 
 	GLuint GetProjectionLoc() { return projectionMatrixLoc; }
 	GLuint GetModelLoc() { return modelMatrixLoc; }
+	GLuint GetViewLoc() { return viewMatrixLoc; }
 	
 	void UseShader() { glUseProgram(shaderID); }
 	void ClearShader();
 
 	~Shader();
 private:
-	GLuint shaderID, projectionMatrixLoc, modelMatrixLoc;
+	GLuint shaderID, projectionMatrixLoc, modelMatrixLoc, viewMatrixLoc;
 	void CompileShader(const char* vCode, const char* fCode);
 	void AddShader(GLuint theProgram, const char* shaderCode, GLenum shaderType);
 };
